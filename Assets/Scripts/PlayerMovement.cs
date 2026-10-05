@@ -19,8 +19,8 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float rotationSpeed = 10f;
 
     [Header("Vibration Settings")]
-    [SerializeField] private int vibrationIntensity = 200; // 0-255
-    [SerializeField] private int vibrationDurationMs = 150;
+    [SerializeField, Range(0, 255)] private int vibrationIntensity = 200;
+    [SerializeField, Range(0, 1000)] private int vibrationDurationMs = 150;
 
     private Rigidbody rb;
     private bool wasButtonPressed = false;

@@ -29,6 +29,8 @@ public class ArduinoController : MonoBehaviour
     [SerializeField] private int analogMax = 1023;
     [SerializeField] private int analogCenter = 512;
     [SerializeField] private float deadzone = 0.1f;
+    [SerializeField] private bool invertHorizontal = false;
+    [SerializeField] private bool invertVertical = true; // most joystick modules read "up" as a lower raw value
 
     // Public read-only state other scripts can poll each frame.
     public float Horizontal { get; private set; }
@@ -106,8 +108,14 @@ public class ArduinoController : MonoBehaviour
     private void Update()
     {
         // Copy thread-written values into properties, applying calibration/deadzone.
-        Horizontal = ApplyDeadzone(Normalize(latestX));
-        Vertical = ApplyDeadzone(Normalize(latestY));
+        float h = Normalize(latestX);
+        float v = Normalize(latestY);
+
+        if (invertHorizontal) h = -h;
+        if (invertVertical) v = -v;
+
+        Horizontal = ApplyDeadzone(h);
+        Vertical = ApplyDeadzone(v);
         ButtonPressed = latestButton;
     }
 
