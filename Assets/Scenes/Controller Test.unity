@@ -308,10 +308,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerTag: Player
-  intensity: 150
-  durationMs: 200
+  intensity: 200
+  durationMs: 250
   pulseWhileInside: 1
-  pulseInterval: 1
+  pulseInterval: 0.5
   gizmoColor: {r: 1, g: 0.12254903, b: 0, a: 0.13333334}
 --- !u!65 &627806728
 BoxCollider:
