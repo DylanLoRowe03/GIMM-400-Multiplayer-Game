@@ -19,6 +19,11 @@ public class PlayerMovement : MonoBehaviour
         playerInput = GetComponent<PlayerInput>();
 
         moveAction = playerInput.actions["Move"];
+
+        if (cameraTransform == null && Camera.main != null)
+        {
+            cameraTransform = Camera.main.transform;
+        }
     }
 
     private void Update()
