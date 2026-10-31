@@ -1,15 +1,17 @@
+
 using UnityEngine;
 using UnityEngine.AI;
 
 public class FriendlyAI : MonoBehaviour
 {
-    [Header("Movement")]
+    [Header("Combat")]
     [SerializeField] private float detectionRange = 20f;
     [SerializeField] private float attackRange = 2f;
-
-    [Header("Combat")]
     [SerializeField] private int damage = 1;
     [SerializeField] private float attackCooldown = 1.5f;
+
+    [Header("Following")]
+    [SerializeField] private float followDistance = 3f;
 
     private NavMeshAgent agent;
     private EnemyHealth target;
@@ -26,30 +28,13 @@ public class FriendlyAI : MonoBehaviour
 
         FindNearestEnemy();
 
-        if (target == null)
+        if (target != null)
         {
-            agent.ResetPath();
-            return;
-        }
-
-        float distance = Vector3.Distance(
-            transform.position,
-            target.transform.position
-        );
-
-        if (distance > attackRange)
-        {
-            agent.isStopped = false;
-            agent.SetDestination(target.transform.position);
+            FightEnemy();
         }
         else
         {
-            agent.isStopped = true;
-
-            if (attackTimer <= 0f)
-            {
-                Attack();
-            }
+            FollowPlayers();
         }
     }
 
@@ -89,13 +74,79 @@ public class FriendlyAI : MonoBehaviour
         }
     }
 
+    private void FightEnemy()
+    {
+        float distance = Vector3.Distance(
+            transform.position,
+            target.transform.position
+        );
+
+        if (distance > attackRange)
+        {
+            agent.isStopped = false;
+            agent.SetDestination(target.transform.position);
+        }
+        else
+        {
+            agent.isStopped = true;
+
+            if (attackTimer <= 0f)
+            {
+                Attack();
+            }
+        }
+    }
+
+    private void FollowPlayers()
+    {
+        PlayerHealth[] players = FindObjectsByType<PlayerHealth>(
+            FindObjectsSortMode.None
+        );
+
+        Vector3 groupCenter = Vector3.zero;
+        int activePlayers = 0;
+
+        foreach (PlayerHealth player in players)
+        {
+            if (player.IsDowned)
+                continue;
+
+            groupCenter += player.transform.position;
+            activePlayers++;
+        }
+
+        if (activePlayers == 0)
+        {
+            agent.isStopped = true;
+            agent.ResetPath();
+            return;
+        }
+
+        groupCenter /= activePlayers;
+
+        float distance = Vector3.Distance(
+            transform.position,
+            groupCenter
+        );
+
+        if (distance > followDistance)
+        {
+            agent.isStopped = false;
+            agent.SetDestination(groupCenter);
+        }
+        else
+        {
+            agent.isStopped = true;
+            agent.ResetPath();
+        }
+    }
+
     private void Attack()
     {
         if (target == null)
             return;
 
         target.TakeDamage(damage);
-
         attackTimer = attackCooldown;
 
         Debug.Log(
