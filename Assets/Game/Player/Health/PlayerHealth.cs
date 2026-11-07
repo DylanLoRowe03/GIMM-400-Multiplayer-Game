@@ -1,8 +1,12 @@
+
 using UnityEngine;
 
 public class PlayerHealth : MonoBehaviour
 {
     [SerializeField] private int maxHealth = 3;
+
+    [Header("Revive Settings")]
+    [SerializeField] private int reviveHealth = 1;
 
     private int currentHealth;
 
@@ -40,6 +44,16 @@ public class PlayerHealth : MonoBehaviour
         currentHealth = Mathf.Min(currentHealth, maxHealth);
 
         Debug.Log($"{gameObject.name} healed {amount}. Health: {currentHealth}/{maxHealth}");
+    }
+
+    public void Revive()
+    {
+        if (!IsDowned)
+            return;
+
+        currentHealth = Mathf.Clamp(reviveHealth, 1, maxHealth);
+
+        Debug.Log($"{gameObject.name} has been REVIVED! Health: {currentHealth}/{maxHealth}");
     }
 
     private void DownPlayer()
