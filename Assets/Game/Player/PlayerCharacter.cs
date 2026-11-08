@@ -21,12 +21,14 @@ public class PlayerCharacter : MonoBehaviour
     private HeadlampAbility headlampAbility;
     private HeadlampRevive headlampRevive;
     private HeadlampCarry headlampCarry;
+    private MatchesAbility matchesAbility;
 
     private void Awake()
     {
         headlampAbility = GetComponent<HeadlampAbility>();
         headlampRevive = GetComponent<HeadlampRevive>();
         headlampCarry = GetComponent<HeadlampCarry>();
+        matchesAbility = GetComponent<MatchesAbility>();
     }
 
     private void Start()
@@ -39,6 +41,9 @@ public class PlayerCharacter : MonoBehaviour
         bool isHeadlamp =
             selectedCharacter == CharacterType.Headlamp;
 
+        bool isMatches =
+            selectedCharacter == CharacterType.Matches;
+
         if (headlampAbility != null)
             headlampAbility.enabled = isHeadlamp;
 
@@ -47,6 +52,9 @@ public class PlayerCharacter : MonoBehaviour
 
         if (headlampCarry != null)
             headlampCarry.enabled = isHeadlamp;
+
+        if (matchesAbility != null)
+            matchesAbility.enabled = isMatches;
     }
 
     public void OnPrimaryAbility(InputValue value)
@@ -59,6 +67,13 @@ public class PlayerCharacter : MonoBehaviour
         {
             headlampAbility.ToggleHeadlamp();
         }
+
+        if (selectedCharacter == CharacterType.Matches &&
+            matchesAbility != null &&
+            matchesAbility.isActiveAndEnabled)
+        {
+            matchesAbility.StrikeMatch();
+        }
     }
 
     public void OnInteract(InputValue value)
@@ -68,7 +83,7 @@ public class PlayerCharacter : MonoBehaviour
         if (selectedCharacter != CharacterType.Headlamp)
             return;
 
-        // First priority: revive a downed teammate
+        // First priority: revive downed teammates
         if (headlampRevive != null &&
             headlampRevive.isActiveAndEnabled &&
             headlampRevive.TryRevive())
@@ -76,11 +91,33 @@ public class PlayerCharacter : MonoBehaviour
             return;
         }
 
-        // Second priority: pick up or drop a heavy object
+        // Second priority: carry heavy objects
         if (headlampCarry != null &&
             headlampCarry.isActiveAndEnabled)
         {
             headlampCarry.TryCarry();
         }
     }
+
+
+
+    public void OnSecondaryAbility(InputValue value)
+    {
+        if (!value.isPressed) return;
+
+        if (selectedCharacter == CharacterType.Matches &&
+            matchesAbility != null &&
+            matchesAbility.isActiveAndEnabled)
+        {
+            // First priority: Ignite environmental objects
+            if (matchesAbility.TryIgnite())
+                return;
+
+            // Second priority: Attack vampires
+            matchesAbility.TryAttackVampire();
+        }
+    }
+
+
+
 }
