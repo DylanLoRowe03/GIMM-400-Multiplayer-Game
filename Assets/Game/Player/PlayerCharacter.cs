@@ -22,6 +22,7 @@ public class PlayerCharacter : MonoBehaviour
     private HeadlampRevive headlampRevive;
     private HeadlampCarry headlampCarry;
     private MatchesAbility matchesAbility;
+    private FlashCameraAbility flashCameraAbility;
 
     private void Awake()
     {
@@ -29,6 +30,7 @@ public class PlayerCharacter : MonoBehaviour
         headlampRevive = GetComponent<HeadlampRevive>();
         headlampCarry = GetComponent<HeadlampCarry>();
         matchesAbility = GetComponent<MatchesAbility>();
+        flashCameraAbility = GetComponent<FlashCameraAbility>();
     }
 
     private void Start()
@@ -44,6 +46,9 @@ public class PlayerCharacter : MonoBehaviour
         bool isMatches =
             selectedCharacter == CharacterType.Matches;
 
+        bool isFlashCamera =
+            selectedCharacter == CharacterType.FlashCamera;
+
         if (headlampAbility != null)
             headlampAbility.enabled = isHeadlamp;
 
@@ -55,11 +60,15 @@ public class PlayerCharacter : MonoBehaviour
 
         if (matchesAbility != null)
             matchesAbility.enabled = isMatches;
+
+        if (flashCameraAbility != null)
+            flashCameraAbility.enabled = isFlashCamera;
     }
 
     public void OnPrimaryAbility(InputValue value)
     {
-        if (!value.isPressed) return;
+        if (!value.isPressed)
+            return;
 
         if (selectedCharacter == CharacterType.Headlamp &&
             headlampAbility != null &&
@@ -74,50 +83,76 @@ public class PlayerCharacter : MonoBehaviour
         {
             matchesAbility.StrikeMatch();
         }
-    }
 
-    public void OnInteract(InputValue value)
-    {
-        if (!value.isPressed) return;
-
-        if (selectedCharacter != CharacterType.Headlamp)
-            return;
-
-        // First priority: revive downed teammates
-        if (headlampRevive != null &&
-            headlampRevive.isActiveAndEnabled &&
-            headlampRevive.TryRevive())
+        if (selectedCharacter == CharacterType.FlashCamera &&
+            flashCameraAbility != null &&
+            flashCameraAbility.isActiveAndEnabled)
         {
-            return;
-        }
-
-        // Second priority: carry heavy objects
-        if (headlampCarry != null &&
-            headlampCarry.isActiveAndEnabled)
-        {
-            headlampCarry.TryCarry();
+            flashCameraAbility.TakePhoto();
         }
     }
-
-
 
     public void OnSecondaryAbility(InputValue value)
     {
-        if (!value.isPressed) return;
+        // Flash Camera: Hold Right Click for UV
+        if (selectedCharacter == CharacterType.FlashCamera &&
+            flashCameraAbility != null &&
+            flashCameraAbility.isActiveAndEnabled)
+        {
+            if (value.isPressed)
+            {
+                flashCameraAbility.StartUV();
+            }
+            else
+            {
+                flashCameraAbility.StopUV();
+            }
 
+            return;
+        }
+
+        if (!value.isPressed)
+            return;
+
+        // Matches: Right Click attacks vampires
         if (selectedCharacter == CharacterType.Matches &&
             matchesAbility != null &&
             matchesAbility.isActiveAndEnabled)
         {
-            // First priority: Ignite environmental objects
-            if (matchesAbility.TryIgnite())
-                return;
-
-            // Second priority: Attack vampires
             matchesAbility.TryAttackVampire();
         }
     }
 
+    public void OnInteract(InputValue value)
+    {
+        if (!value.isPressed)
+            return;
 
+        if (selectedCharacter == CharacterType.Headlamp)
+        {
+            // Revive teammates first
+            if (headlampRevive != null &&
+                headlampRevive.isActiveAndEnabled &&
+                headlampRevive.TryRevive())
+            {
+                return;
+            }
 
+            // Carry or drop heavy objects
+            if (headlampCarry != null &&
+                headlampCarry.isActiveAndEnabled)
+            {
+                headlampCarry.TryCarry();
+            }
+        }
+        else if (selectedCharacter == CharacterType.Matches)
+        {
+            // Ignite candles, fireplaces, and debris
+            if (matchesAbility != null &&
+                matchesAbility.isActiveAndEnabled)
+            {
+                matchesAbility.TryIgnite();
+            }
+        }
+    }
 }
