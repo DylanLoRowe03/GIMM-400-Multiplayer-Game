@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -15,6 +16,9 @@ public class EnemyAI : MonoBehaviour
     private PlayerHealth target;
     private float attackTimer;
 
+    // Stun
+    private float stunEndTime;
+
     private void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
@@ -22,13 +26,24 @@ public class EnemyAI : MonoBehaviour
 
     private void Update()
     {
+        // Do nothing while stunned
+        if (Time.time < stunEndTime)
+        {
+            if (agent.isOnNavMesh)
+                agent.isStopped = true;
+
+            return;
+        }
+
         attackTimer -= Time.deltaTime;
 
         FindNearestPlayer();
 
         if (target == null)
         {
-            agent.ResetPath();
+            if (agent.isOnNavMesh)
+                agent.ResetPath();
+
             return;
         }
 
@@ -40,26 +55,49 @@ public class EnemyAI : MonoBehaviour
         if (distance > detectionRange)
         {
             target = null;
-            agent.ResetPath();
+
+            if (agent.isOnNavMesh)
+                agent.ResetPath();
+
             return;
         }
 
         if (distance > attackRange)
         {
-            // Chase player.
-            agent.isStopped = false;
-            agent.SetDestination(target.transform.position);
+            // Chase player
+            if (agent.isOnNavMesh)
+            {
+                agent.isStopped = false;
+                agent.SetDestination(target.transform.position);
+            }
         }
         else
         {
-            // Stop and attack.
-            agent.isStopped = true;
+            // Stop and attack
+            if (agent.isOnNavMesh)
+                agent.isStopped = true;
 
             if (attackTimer <= 0f)
             {
                 Attack();
             }
         }
+    }
+
+    public void Stun(float duration)
+    {
+        stunEndTime = Mathf.Max(
+            stunEndTime,
+            Time.time + duration
+        );
+
+        if (agent.isOnNavMesh)
+        {
+            agent.isStopped = true;
+            agent.velocity = Vector3.zero;
+        }
+
+        Debug.Log(gameObject.name + " was stunned!");
     }
 
     private void FindNearestPlayer()
@@ -88,7 +126,8 @@ public class EnemyAI : MonoBehaviour
             }
         }
 
-        if (closestPlayer != null && closestDistance <= detectionRange)
+        if (closestPlayer != null &&
+            closestDistance <= detectionRange)
         {
             target = closestPlayer;
         }
@@ -104,7 +143,6 @@ public class EnemyAI : MonoBehaviour
             return;
 
         target.TakeDamage(damage);
-
         attackTimer = attackCooldown;
 
         Debug.Log(
