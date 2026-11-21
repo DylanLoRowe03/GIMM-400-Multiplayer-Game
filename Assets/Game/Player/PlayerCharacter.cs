@@ -23,6 +23,7 @@ public class PlayerCharacter : MonoBehaviour
     private HeadlampCarry headlampCarry;
     private MatchesAbility matchesAbility;
     private FlashCameraAbility flashCameraAbility;
+    private LanternAbility lanternAbility;
 
     private void Awake()
     {
@@ -31,6 +32,7 @@ public class PlayerCharacter : MonoBehaviour
         headlampCarry = GetComponent<HeadlampCarry>();
         matchesAbility = GetComponent<MatchesAbility>();
         flashCameraAbility = GetComponent<FlashCameraAbility>();
+        lanternAbility = GetComponent<LanternAbility>();
     }
 
     private void Start()
@@ -49,6 +51,9 @@ public class PlayerCharacter : MonoBehaviour
         bool isFlashCamera =
             selectedCharacter == CharacterType.FlashCamera;
 
+        bool isLantern =
+            selectedCharacter == CharacterType.Lantern;
+
         if (headlampAbility != null)
             headlampAbility.enabled = isHeadlamp;
 
@@ -63,6 +68,9 @@ public class PlayerCharacter : MonoBehaviour
 
         if (flashCameraAbility != null)
             flashCameraAbility.enabled = isFlashCamera;
+
+        if (lanternAbility != null)
+            lanternAbility.enabled = isLantern;
     }
 
     public void OnPrimaryAbility(InputValue value)
@@ -90,23 +98,25 @@ public class PlayerCharacter : MonoBehaviour
         {
             flashCameraAbility.TakePhoto();
         }
+
+        if (selectedCharacter == CharacterType.Lantern &&
+            lanternAbility != null &&
+            lanternAbility.isActiveAndEnabled)
+        {
+            lanternAbility.ToggleLarge();
+        }
     }
 
     public void OnSecondaryAbility(InputValue value)
     {
-        // Flash Camera: Hold Right Click for UV
         if (selectedCharacter == CharacterType.FlashCamera &&
             flashCameraAbility != null &&
             flashCameraAbility.isActiveAndEnabled)
         {
             if (value.isPressed)
-            {
                 flashCameraAbility.StartUV();
-            }
             else
-            {
                 flashCameraAbility.StopUV();
-            }
 
             return;
         }
@@ -114,12 +124,18 @@ public class PlayerCharacter : MonoBehaviour
         if (!value.isPressed)
             return;
 
-        // Matches: Right Click attacks vampires
         if (selectedCharacter == CharacterType.Matches &&
             matchesAbility != null &&
             matchesAbility.isActiveAndEnabled)
         {
             matchesAbility.TryAttackVampire();
+        }
+
+        if (selectedCharacter == CharacterType.Lantern &&
+            lanternAbility != null &&
+            lanternAbility.isActiveAndEnabled)
+        {
+            lanternAbility.ToggleSmall();
         }
     }
 
@@ -130,7 +146,6 @@ public class PlayerCharacter : MonoBehaviour
 
         if (selectedCharacter == CharacterType.Headlamp)
         {
-            // Revive teammates first
             if (headlampRevive != null &&
                 headlampRevive.isActiveAndEnabled &&
                 headlampRevive.TryRevive())
@@ -138,7 +153,6 @@ public class PlayerCharacter : MonoBehaviour
                 return;
             }
 
-            // Carry or drop heavy objects
             if (headlampCarry != null &&
                 headlampCarry.isActiveAndEnabled)
             {
@@ -147,7 +161,6 @@ public class PlayerCharacter : MonoBehaviour
         }
         else if (selectedCharacter == CharacterType.Matches)
         {
-            // Ignite candles, fireplaces, and debris
             if (matchesAbility != null &&
                 matchesAbility.isActiveAndEnabled)
             {
