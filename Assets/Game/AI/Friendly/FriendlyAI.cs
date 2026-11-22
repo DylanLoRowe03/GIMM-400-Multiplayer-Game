@@ -13,17 +13,39 @@ public class FriendlyAI : MonoBehaviour
     [Header("Following")]
     [SerializeField] private float followDistance = 3f;
 
+    [Header("Lantern Support Boost")]
+    [SerializeField] private float lanternMovementMultiplier = 1.5f;
+    [SerializeField] private float lanternAttackMultiplier = 1.5f;
+
     private NavMeshAgent agent;
     private EnemyHealth target;
     private float attackTimer;
 
+    private float normalMovementSpeed;
+    private float currentAttackCooldown;
+    private bool isLanternBoosted;
+
     private void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
+
+        if (agent != null)
+        {
+            normalMovementSpeed = agent.speed;
+        }
+
+        currentAttackCooldown = attackCooldown;
     }
 
     private void Update()
     {
+        if (agent == null || !agent.isOnNavMesh)
+            return;
+
+        // Check whether the ally is inside
+        // an active Large Radius Lantern.
+        UpdateLanternBoost();
+
         attackTimer -= Time.deltaTime;
 
         FindNearestEnemy();
@@ -38,11 +60,73 @@ public class FriendlyAI : MonoBehaviour
         }
     }
 
+    private void UpdateLanternBoost()
+    {
+        LanternAbility[] lanterns =
+            FindObjectsByType<LanternAbility>(
+                FindObjectsSortMode.None
+            );
+
+        bool shouldBoost = false;
+
+        foreach (LanternAbility lantern in lanterns)
+        {
+            if (!lantern.IsDefenseActive)
+                continue;
+
+            float distance = Vector3.Distance(
+                transform.position,
+                lantern.transform.position
+            );
+
+            if (distance <= lantern.DefenseRadius)
+            {
+                shouldBoost = true;
+                break;
+            }
+        }
+
+        if (shouldBoost)
+        {
+            agent.speed =
+                normalMovementSpeed * lanternMovementMultiplier;
+
+            currentAttackCooldown =
+                attackCooldown / lanternAttackMultiplier;
+        }
+        else
+        {
+            agent.speed = normalMovementSpeed;
+            currentAttackCooldown = attackCooldown;
+        }
+
+        if (shouldBoost != isLanternBoosted)
+        {
+            isLanternBoosted = shouldBoost;
+
+            if (isLanternBoosted)
+            {
+                Debug.Log(
+                    gameObject.name +
+                    " received the Lantern support boost!"
+                );
+            }
+            else
+            {
+                Debug.Log(
+                    gameObject.name +
+                    " lost the Lantern support boost."
+                );
+            }
+        }
+    }
+
     private void FindNearestEnemy()
     {
-        EnemyHealth[] enemies = FindObjectsByType<EnemyHealth>(
-            FindObjectsSortMode.None
-        );
+        EnemyHealth[] enemies =
+            FindObjectsByType<EnemyHealth>(
+                FindObjectsSortMode.None
+            );
 
         EnemyHealth closestEnemy = null;
         float closestDistance = Mathf.Infinity;
@@ -64,7 +148,8 @@ public class FriendlyAI : MonoBehaviour
             }
         }
 
-        if (closestEnemy != null && closestDistance <= detectionRange)
+        if (closestEnemy != null &&
+            closestDistance <= detectionRange)
         {
             target = closestEnemy;
         }
@@ -99,9 +184,10 @@ public class FriendlyAI : MonoBehaviour
 
     private void FollowPlayers()
     {
-        PlayerHealth[] players = FindObjectsByType<PlayerHealth>(
-            FindObjectsSortMode.None
-        );
+        PlayerHealth[] players =
+            FindObjectsByType<PlayerHealth>(
+                FindObjectsSortMode.None
+            );
 
         Vector3 groupCenter = Vector3.zero;
         int activePlayers = 0;
@@ -147,10 +233,22 @@ public class FriendlyAI : MonoBehaviour
             return;
 
         target.TakeDamage(damage);
-        attackTimer = attackCooldown;
+
+        // Faster attacks while boosted.
+        attackTimer = currentAttackCooldown;
 
         Debug.Log(
             $"{gameObject.name} attacked {target.gameObject.name}!"
         );
+    }
+
+    private void OnDisable()
+    {
+        if (agent != null)
+        {
+            agent.speed = normalMovementSpeed;
+        }
+
+        isLanternBoosted = false;
     }
 }

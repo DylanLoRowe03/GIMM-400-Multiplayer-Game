@@ -4039,6 +4039,8 @@ MonoBehaviour:
   damage: 1
   attackCooldown: 1.5
   followDistance: 3
+  lanternMovementMultiplier: 1.5
+  lanternAttackMultiplier: 1.5
 --- !u!195 &1708815792
 NavMeshAgent:
   m_ObjectHideFlags: 0
