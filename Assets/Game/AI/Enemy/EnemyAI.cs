@@ -12,26 +12,32 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private int damage = 1;
     [SerializeField] private float attackCooldown = 2f;
 
+    [Header("Lantern Defense")]
+    [SerializeField] private float lanternBoundaryBuffer = 0.75f;
+
     private NavMeshAgent agent;
     private PlayerHealth target;
     private float attackTimer;
-
-    // Stun
     private float stunEndTime;
+    private float normalSpeed;
 
     private void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
+
+        if (agent != null)
+            normalSpeed = agent.speed;
     }
 
     private void Update()
     {
-        // Do nothing while stunned
+        if (agent == null || !agent.isOnNavMesh)
+            return;
+
+        // Preserve the Flash Camera stun.
         if (Time.time < stunEndTime)
         {
-            if (agent.isOnNavMesh)
-                agent.isStopped = true;
-
+            agent.isStopped = true;
             return;
         }
 
@@ -39,11 +45,84 @@ public class EnemyAI : MonoBehaviour
 
         FindNearestPlayer();
 
+        LanternAbility[] lanterns =
+            FindObjectsByType<LanternAbility>(
+                FindObjectsSortMode.None
+            );
+
+        float speedMultiplier = 1f;
+        LanternAbility blockingLantern = null;
+
+        foreach (LanternAbility lantern in lanterns)
+        {
+            if (!lantern.IsDefenseActive)
+                continue;
+
+            float myDistance = Vector3.Distance(
+                transform.position,
+                lantern.transform.position
+            );
+
+            float radius = lantern.DefenseRadius;
+
+            // Release slots when vampires move away.
+            if (myDistance > radius + lanternBoundaryBuffer)
+            {
+                if (lantern.HasSlot(this))
+                    lantern.ReleaseSlot(this);
+            }
+
+            bool hasSlot = lantern.TryReserveSlot(this);
+
+            if (hasSlot)
+            {
+                if (myDistance <= radius)
+                {
+                    speedMultiplier = Mathf.Min(
+                        speedMultiplier,
+                        lantern.VampireSpeedMultiplier
+                    );
+                }
+            }
+            else
+            {
+                // Only block if the vampire is trying to
+                // reach a player inside the lantern.
+                if (target != null)
+                {
+                    float targetDistance = Vector3.Distance(
+                        target.transform.position,
+                        lantern.transform.position
+                    );
+
+                    if (targetDistance < radius)
+                    {
+                        blockingLantern = lantern;
+                        break;
+                    }
+                }
+
+                // Also push out unreserved vampires
+                // already inside the lantern.
+                if (myDistance < radius)
+                {
+                    blockingLantern = lantern;
+                    break;
+                }
+            }
+        }
+
+        agent.speed = normalSpeed * speedMultiplier;
+
+        if (blockingLantern != null)
+        {
+            MoveOutsideLantern(blockingLantern);
+            return;
+        }
+
         if (target == null)
         {
-            if (agent.isOnNavMesh)
-                agent.ResetPath();
-
+            agent.ResetPath();
             return;
         }
 
@@ -55,32 +134,55 @@ public class EnemyAI : MonoBehaviour
         if (distance > detectionRange)
         {
             target = null;
-
-            if (agent.isOnNavMesh)
-                agent.ResetPath();
-
+            agent.ResetPath();
             return;
         }
 
         if (distance > attackRange)
         {
-            // Chase player
-            if (agent.isOnNavMesh)
-            {
-                agent.isStopped = false;
-                agent.SetDestination(target.transform.position);
-            }
+            agent.isStopped = false;
+            agent.SetDestination(target.transform.position);
         }
         else
         {
-            // Stop and attack
-            if (agent.isOnNavMesh)
-                agent.isStopped = true;
+            agent.isStopped = true;
 
             if (attackTimer <= 0f)
-            {
                 Attack();
-            }
+        }
+    }
+
+    private void MoveOutsideLantern(LanternAbility lantern)
+    {
+        Vector3 direction =
+            transform.position - lantern.transform.position;
+
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude < 0.001f)
+            direction = transform.forward;
+
+        direction.Normalize();
+
+        Vector3 desiredPosition =
+            lantern.transform.position +
+            direction *
+            (lantern.DefenseRadius + lanternBoundaryBuffer);
+
+        NavMeshHit hit;
+
+        if (NavMesh.SamplePosition(
+            desiredPosition,
+            out hit,
+            2f,
+            NavMesh.AllAreas))
+        {
+            agent.isStopped = false;
+            agent.SetDestination(hit.position);
+        }
+        else
+        {
+            agent.isStopped = true;
         }
     }
 
@@ -91,7 +193,7 @@ public class EnemyAI : MonoBehaviour
             Time.time + duration
         );
 
-        if (agent.isOnNavMesh)
+        if (agent != null && agent.isOnNavMesh)
         {
             agent.isStopped = true;
             agent.velocity = Vector3.zero;
@@ -102,9 +204,10 @@ public class EnemyAI : MonoBehaviour
 
     private void FindNearestPlayer()
     {
-        PlayerHealth[] players = FindObjectsByType<PlayerHealth>(
-            FindObjectsSortMode.None
-        );
+        PlayerHealth[] players =
+            FindObjectsByType<PlayerHealth>(
+                FindObjectsSortMode.None
+            );
 
         PlayerHealth closestPlayer = null;
         float closestDistance = Mathf.Infinity;
@@ -148,5 +251,18 @@ public class EnemyAI : MonoBehaviour
         Debug.Log(
             $"{gameObject.name} attacked {target.gameObject.name}!"
         );
+    }
+
+    private void OnDisable()
+    {
+        LanternAbility[] lanterns =
+            FindObjectsByType<LanternAbility>(
+                FindObjectsSortMode.None
+            );
+
+        foreach (LanternAbility lantern in lanterns)
+        {
+            lantern.ReleaseSlot(this);
+        }
     }
 }
