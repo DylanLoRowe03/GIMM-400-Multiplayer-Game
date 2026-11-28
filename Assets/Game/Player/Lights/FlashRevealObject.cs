@@ -1,4 +1,3 @@
-
 using UnityEngine;
 
 public class FlashRevealObject : MonoBehaviour
@@ -12,10 +11,12 @@ public class FlashRevealObject : MonoBehaviour
     private bool isRevealed;
     private float revealEndTime;
 
+    public bool IsRevealed => isRevealed;
+
     private void Awake()
     {
-        renderers = GetComponentsInChildren<Renderer>();
-        colliders = GetComponentsInChildren<Collider>();
+        renderers = GetComponentsInChildren<Renderer>(true);
+        colliders = GetComponentsInChildren<Collider>(true);
 
         SetRevealed(false);
     }
