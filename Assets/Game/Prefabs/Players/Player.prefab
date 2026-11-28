@@ -336,7 +336,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe18b140de4e48d4b90c590f498ab11f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  selectedCharacter: 2
+  selectedCharacter: 3
 --- !u!114 &1783920335058725503
 MonoBehaviour:
   m_ObjectHideFlags: 0

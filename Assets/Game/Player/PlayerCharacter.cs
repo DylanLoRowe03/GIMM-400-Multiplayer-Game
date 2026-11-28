@@ -40,6 +40,21 @@ public class PlayerCharacter : MonoBehaviour
         ApplyCharacter();
     }
 
+    public void SetCharacter(CharacterType character)
+    {
+        selectedCharacter = character;
+        ApplyCharacter();
+    }
+
+    public void ReleaseHeldAbilities()
+    {
+        if (flashCameraAbility != null &&
+            flashCameraAbility.isActiveAndEnabled)
+        {
+            flashCameraAbility.StopUV();
+        }
+    }
+
     private void ApplyCharacter()
     {
         bool isHeadlamp =
